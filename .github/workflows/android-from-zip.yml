@@ -12,24 +12,24 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Extract project (handle nested folder)
+      - name: Extract and flatten project
         run: |
           sudo apt-get update && sudo apt-get install -y unzip
-          # Find any .zip file in repo and extract
           ZIPFILE="$(ls -1 *.zip 2>/dev/null | head -n1 || true)"
           if [ -n "$ZIPFILE" ]; then
             echo "Found zip: $ZIPFILE"
             unzip -o "$ZIPFILE" -d .
-            TOPDIR="$(zipinfo -1 "$ZIPFILE" | head -n1 | cut -d/ -f1)"
-            if [ -d "$TOPDIR" ]; then
-              echo "Moving $TOPDIR contents to root"
+            # Find the first directory with gradle files inside and move it to root
+            INNER_DIR=$(find . -type f -name "build.gradle.kts" -exec dirname {} \; | head -n1)
+            if [ -n "$INNER_DIR" ] && [ "$INNER_DIR" != "." ]; then
+              echo "Moving contents of $INNER_DIR to root..."
               shopt -s dotglob
-              mv "$TOPDIR"/* .
+              mv "$INNER_DIR"/* .
             fi
           else
-            echo "No zip file found, continuing..."
+            echo "No zip file found."
           fi
-          echo "Final folder structure:"
+          echo "Final structure:"
           ls -la
 
       - name: Set up JDK 17
